@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PeopleViewModel(
+class PersonViewModel(
    private val _context: Context,
    private val _personRepository: IPersonRepository,
    private val _imageRepository: ImageRepository,
@@ -290,6 +290,6 @@ class PeopleViewModel(
    }
 
    companion object {
-      private const val TAG = "<-PeopleViewModel"
+      private const val TAG = "<-PersonViewModel"
    }
 }

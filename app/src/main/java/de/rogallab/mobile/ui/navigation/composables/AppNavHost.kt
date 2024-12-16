@@ -17,7 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.rogallab.mobile.domain.utilities.logVerbose
-import de.rogallab.mobile.ui.people.PeopleViewModel
+import de.rogallab.mobile.ui.people.PersonViewModel
 import de.rogallab.mobile.ui.people.PersonValidator
 import de.rogallab.mobile.ui.people.composables.PeopleListScreen
 import de.rogallab.mobile.ui.people.composables.PersonScreen
@@ -31,7 +31,7 @@ import org.koin.compose.koinInject
 fun AppNavHost(
    // create a NavHostController with a factory function
    navController: NavHostController = rememberNavController(),
-   peopleViewModel: PeopleViewModel = koinViewModel<PeopleViewModel>(), //koinViewModel(),
+   peopleViewModel: PersonViewModel = koinViewModel<PersonViewModel>(), //koinViewModel(),
 ) {
    val tag = "<-AppNavHost"
    val duration = 700  // in milliseconds

@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,11 +24,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.rogallab.mobile.R
 import de.rogallab.mobile.data.local.io.writeImageToStorage
+import de.rogallab.mobile.domain.IMediaStoreRepository
 import de.rogallab.mobile.domain.utilities.logDebug
+import org.koin.compose.koinInject
 
 @Composable
 fun CameraTakePhoto(
    onImagePathChanged: (String) -> Unit,  // Event ↑
+   mediaStoreRepository: IMediaStoreRepository = koinInject(),
 ) {
    val context = LocalContext.current
    // callback camera
@@ -42,6 +46,12 @@ fun CameraTakePhoto(
             logDebug("<-CameraTakePhoto", "Path $imagePath")
             onImagePathChanged(imagePath) // Event ↑
          }
+      }
+   }
+
+   bitmapState.value?.let { bitmap ->
+      LaunchedEffect(bitmap) {
+         mediaStoreRepository.saveImage(bitmap)
       }
    }
 

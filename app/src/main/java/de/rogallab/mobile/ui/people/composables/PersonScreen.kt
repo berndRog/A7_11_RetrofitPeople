@@ -34,13 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import de.rogallab.mobile.R
+import de.rogallab.mobile.data.mediastore.MediaStoreRepository
+import de.rogallab.mobile.domain.IMediaStoreRepository
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.ui.errors.ErrorParams
 import de.rogallab.mobile.ui.errors.ErrorState
 import de.rogallab.mobile.ui.errors.showError
 import de.rogallab.mobile.ui.navigation.NavEvent
 import de.rogallab.mobile.ui.navigation.NavScreen
-import de.rogallab.mobile.ui.people.PeopleViewModel
+import de.rogallab.mobile.ui.people.PersonViewModel
 import de.rogallab.mobile.ui.people.PersonIntent
 import de.rogallab.mobile.ui.people.PersonUiState
 import de.rogallab.mobile.ui.people.PersonValidator
@@ -50,9 +52,10 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonScreen(
-   viewModel: PeopleViewModel = koinViewModel(),
+   viewModel: PersonViewModel = koinViewModel(),
    validator: PersonValidator = koinInject(),
    imageLoader: ImageLoader = koinInject(),
+   mediaStoreRepository: IMediaStoreRepository = koinInject(),
    isInputScreen: Boolean = true,
    id: String? = null
 ) {
@@ -160,8 +163,9 @@ fun PersonScreen(
             onImagePathChange = { path: String ->              // Event ↑
                viewModel.onProcessPersonIntent(PersonIntent.LocalImageChange(path))
             },
-            imageLoader = imageLoader
-
+            handleErrorEvent = viewModel::handleErrorEvent,
+            imageLoader = imageLoader,
+            mediaStoreRepository = mediaStoreRepository
          )
       } // Column
    } // Scaffold

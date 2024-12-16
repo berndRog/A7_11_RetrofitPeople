@@ -46,25 +46,19 @@ import de.rogallab.mobile.ui.errors.ErrorState
 import de.rogallab.mobile.ui.errors.showError
 import de.rogallab.mobile.ui.navigation.NavEvent
 import de.rogallab.mobile.ui.navigation.NavScreen
-import de.rogallab.mobile.ui.people.PeopleViewModel
+import de.rogallab.mobile.ui.people.PersonViewModel
 import de.rogallab.mobile.ui.people.PersonIntent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PeopleListScreen(
-   viewModel: PeopleViewModel = viewModel(),
+   viewModel: PersonViewModel = viewModel(),
 ) {
    val tag = "<-PeopleListScreen"
 
    // Observe the peopleUiState of the viewmodel
    val peopleUiState by viewModel.peopleUiStateFlow.collectAsStateWithLifecycle()
 
-//   // read all people from repository, when the screen is created
-//   LaunchedEffect(Unit) {
-//      logVerbose(tag, "fetchPeople()")
-//      viewModel.onProcessPeopleIntent(PeopleIntent.Fetch)
-//   }
-   
    // Back navigation
    val activity = LocalContext.current as Activity
    BackHandler(

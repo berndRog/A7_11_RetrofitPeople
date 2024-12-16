@@ -23,7 +23,8 @@ fun SelectAndShowImage(
    localImage: String?, // State ↓
    remoteImage: String?,                  // State ↓
    onImagePathChange: (String) -> Unit,   // Event ↑
-   imageLoader: ImageLoader = koinInject()
+   handleErrorEvent: (Throwable) -> Unit,
+   imageLoader: ImageLoader = koinInject(),
 ) {
 
    Row(
@@ -31,7 +32,6 @@ fun SelectAndShowImage(
          .padding(vertical = 8.dp)
          .fillMaxWidth()
    ) {
-      // localImage first
       var imagePath: String? = whichImagePath(localImage, remoteImage)
       if(!imagePath.isNullOrEmpty()) {
          AsyncImage(
@@ -55,6 +55,7 @@ fun SelectAndShowImage(
          Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
          CameraCheckPermission(
+            handleErrorEvent = { handleErrorEvent(it) },
             onPermissionGranted = {
                CameraTakePhoto(onImagePathChange)
             }
