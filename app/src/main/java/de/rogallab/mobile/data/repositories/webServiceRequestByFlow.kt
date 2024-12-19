@@ -18,6 +18,8 @@ fun <Dto, T> webServiceRequestByFlow(
 ): Flow<ResultData<List<T>>> = flow {
 
    try {
+      emit(ResultData.Loading)
+
       // make the api call
       val response: Response<List<Dto>> = apiCall()
       logResponse(tag, response)

@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -17,23 +17,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.rogallab.mobile.R
-import de.rogallab.mobile.data.local.io.writeImageToStorage
-
 import de.rogallab.mobile.domain.utilities.logDebug
+import kotlinx.coroutines.launch
 
 @Composable
 fun SelectPhotoFromGallery(
-   onImagePathChanged: (String) -> Unit,  // Event ↑
+   writeToLocalStorage: (Bitmap) -> Unit  // Event ↑
 ) {
 
    var bitmap:Bitmap? = null
    val context = LocalContext.current
+
+   val coroutineScope = rememberCoroutineScope()
 
    // callback for result from photo gallery
    val launcher = rememberLauncherForActivityResult(
@@ -53,9 +55,8 @@ fun SelectPhotoFromGallery(
          }
          // save bitmap to internal storage of the app
          bitmap?.let { bitmap ->
-            writeImageToStorage(context, bitmap)?.let { imageUrl:String ->
-               logDebug("[SelectPhotoFromGalery]", "Storage $imageUrl")
-               onImagePathChanged(imageUrl)  // Event ↑
+            coroutineScope.launch {
+               writeToLocalStorage(bitmap)
             }
          }
       }

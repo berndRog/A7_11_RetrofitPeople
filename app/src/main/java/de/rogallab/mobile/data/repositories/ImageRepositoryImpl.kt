@@ -1,9 +1,9 @@
 package de.rogallab.mobile.data.repositories
 
 import android.content.Context
-import de.rogallab.mobile.data.local.io.writeInputStreamToStorage
 import de.rogallab.mobile.data.remote.ImageWebservice
 import de.rogallab.mobile.data.remote.network.httpStatusMessage
+import de.rogallab.mobile.domain.ILocalStorageRepository
 import de.rogallab.mobile.domain.ImageRepository
 import de.rogallab.mobile.domain.ResultData
 import de.rogallab.mobile.domain.utilities.logVerbose
@@ -20,34 +20,37 @@ import java.io.File
 import java.io.IOException
 
 class ImageRepositoryImpl(
+   private val _context: Context,
    private val _webService: ImageWebservice,
+   private val _localStorageRepository: ILocalStorageRepository,
    private val _dispatcher: CoroutineDispatcher,
    private val _exceptionHandler: CoroutineExceptionHandler
 ) : ImageRepository {
 
    override suspend fun get(
-      context: Context,
       fileName: String
    ): ResultData<String?> = withContext(_dispatcher + _exceptionHandler) {
       try {
          val response: Response<ResponseBody> = _webService.download(fileName)
          if (response.isSuccessful) {
             response.body()?.let { responseBody ->
-               val localImagePath = writeInputStreamToStorage(
-                  context = context,
+               when(val resultData = _localStorageRepository.writeInputStream(
                   inputStream = responseBody.byteStream(),
                   fileName = fileName
-               )
-               return@withContext ResultData.Success(localImagePath)
+               )) {
+                  is ResultData.Success -> ResultData.Success(resultData.data)
+                  is ResultData.Error -> ResultData.Error(resultData.throwable)
+                  is ResultData.Loading -> ResultData.Loading
+               }
             } ?: run {
-               return@withContext ResultData.Error(RuntimeException("Response body is null"))
+               ResultData.Error(RuntimeException("Response body is null"))
             }
          } else {
             val message = httpStatusMessage(response.code())
-            return@withContext ResultData.Error(RuntimeException("$message"))
+            ResultData.Error(RuntimeException("$message"))
          }
       } catch (t: Throwable) {
-         return@withContext ResultData.Error(t)
+         ResultData.Error(t)
       }
    }
 
@@ -66,21 +69,23 @@ class ImageRepositoryImpl(
             if (response.isSuccessful) {
                // Handle the successful response
                response.body()?.let {
-                  return@withContext ResultData.Success(it)
+                  ResultData.Success(it)
                } ?: run {
-                  return@withContext ResultData.Error(RuntimeException("response.body() is null"))
+                  ResultData.Error(RuntimeException("response.body() is null"))
                }
             } else {
                val message = httpStatusMessage(response.code())
-               return@withContext ResultData.Error(RuntimeException("$message"))
+               ResultData.Error(RuntimeException("$message"))
             }
          }
       } catch (t: Throwable) {
-         return@withContext ResultData.Error(t)
+         ResultData.Error(t)
       }
    }
 
-   private fun createMultiPartBody(fromUrlPath: String): ResultData<MultipartBody.Part> {
+   private fun createMultiPartBody(
+      fromUrlPath: String
+   ): ResultData<MultipartBody.Part> {
       val file = File(fromUrlPath)
       if (!file.exists())
          return ResultData.Error(IOException("file does not exist"))

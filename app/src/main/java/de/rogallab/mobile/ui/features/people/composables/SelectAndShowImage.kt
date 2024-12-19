@@ -1,4 +1,5 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,24 +16,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
-import de.rogallab.mobile.ui.people.whichImagePath
-import org.koin.compose.koinInject
+import de.rogallab.mobile.domain.whichImagePath
 
 @Composable
 fun SelectAndShowImage(
-   localImage: String?, // State ↓
-   remoteImage: String?,                  // State ↓
-   onImagePathChange: (String) -> Unit,   // Event ↑
-   handleErrorEvent: (Throwable) -> Unit,
-   imageLoader: ImageLoader = koinInject(),
+   localImage: String?,                    // State ↓
+   remoteImage: String?,                   // State ↓
+   handleErrorEvent: (Throwable) -> Unit,  // Event ↑
+   writeToLocalStorage: (Bitmap) -> Unit,  // Event ↑
+   writeToMediaStore: (Bitmap) -> Unit,    // Event ↑
+   imageLoader: ImageLoader,
 ) {
 
-   Row(
-      modifier = Modifier
-         .padding(vertical = 8.dp)
-         .fillMaxWidth()
-   ) {
-      var imagePath: String? = whichImagePath(localImage, remoteImage)
+   Row(modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth()) {
+      val imagePath: String? = whichImagePath(localImage, remoteImage)
       if(!imagePath.isNullOrEmpty()) {
          AsyncImage(
             modifier = Modifier
@@ -49,15 +46,13 @@ fun SelectAndShowImage(
          modifier = Modifier.fillMaxWidth(),
          verticalArrangement = Arrangement.Center
       ) {
-         SelectPhotoFromGallery(
-            onImagePathChanged = onImagePathChange
-         )
+         SelectPhotoFromGallery(writeToLocalStorage)
          Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
          CameraCheckPermission(
-            handleErrorEvent = { handleErrorEvent(it) },
+            handleErrorEvent = handleErrorEvent,
             onPermissionGranted = {
-               CameraTakePhoto(onImagePathChange)
+               CameraTakePhoto(writeToLocalStorage, writeToMediaStore)
             }
          )
       }

@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people
+package de.rogallab.mobile.ui.features.people
 
 import androidx.compose.runtime.Immutable
 import de.rogallab.mobile.domain.entities.Person

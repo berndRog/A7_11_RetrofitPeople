@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import de.rogallab.mobile.ui.people.whichImagePath
+import de.rogallab.mobile.domain.whichImagePath
 
 @Composable
 fun PersonCard(

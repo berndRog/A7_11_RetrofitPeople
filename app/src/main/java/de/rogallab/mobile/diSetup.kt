@@ -17,14 +17,21 @@ import de.rogallab.mobile.data.remote.network.createOkHttpClient
 import de.rogallab.mobile.data.remote.network.createRetrofit
 import de.rogallab.mobile.data.remote.network.createWebservice
 import de.rogallab.mobile.data.repositories.ImageRepositoryImpl
+import de.rogallab.mobile.data.io.LocalStorageRepository
+import de.rogallab.mobile.data.remote.SeedWebservice
 import de.rogallab.mobile.data.repositories.PersonRepository
+import de.rogallab.mobile.domain.ILocalStorageRepository
 import de.rogallab.mobile.domain.IMediaStoreRepository
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.ImageRepository
 import de.rogallab.mobile.domain.utilities.logError
 import de.rogallab.mobile.domain.utilities.logInfo
-import de.rogallab.mobile.ui.people.PersonViewModel
-import de.rogallab.mobile.ui.people.PersonValidator
+import de.rogallab.mobile.ui.IErrorHandler
+import de.rogallab.mobile.ui.INavigationHandler
+import de.rogallab.mobile.ui.errors.ErrorHandler
+import de.rogallab.mobile.ui.navigation.NavigationHandler
+import de.rogallab.mobile.ui.features.people.PersonViewModel
+import de.rogallab.mobile.ui.features.people.PersonValidator
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -35,11 +42,9 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import kotlin.coroutines.CoroutineContext
 
 typealias CoroutineDispatcherMain = CoroutineDispatcher
 typealias CoroutineDispatcherIo = CoroutineDispatcher
@@ -50,13 +55,13 @@ val domainModules: Module = module {
    val tag = "<-domainModules"
 
 
-   logInfo(tag, "single    -> CoroutineExceptionHandler")
-   single<CoroutineExceptionHandler> {
+   logInfo(tag, "factory   -> CoroutineExceptionHandler")
+   factory<CoroutineExceptionHandler> {
       CoroutineExceptionHandler { _, exception ->
          logError(tag, "Coroutine exception: ${exception.localizedMessage}")
       }
    }
-   logInfo( tag, "factory   -> CoroutineDispatcherMain")
+   logInfo( tag, "factory  -> CoroutineDispatcherMain")
    factory<CoroutineDispatcherMain> { Dispatchers.Main }
 
    logInfo(tag, "factory   -> CoroutineDispatcherIo)")
@@ -78,9 +83,7 @@ val domainModules: Module = module {
             get<CoroutineDispatcherIo>()
       )
    }
-
 }
-
 
 val dataModules = module {
    val tag = "<-dataModules"
@@ -88,8 +91,10 @@ val dataModules = module {
    logInfo(tag, "single    -> Seed")
    single<Seed> {
       Seed(
-         context = androidContext(),
-         resources = androidContext().resources
+         _resources = androidContext().resources,
+         _localStorageRepository = get<ILocalStorageRepository>(),
+         _coroutineScope = get<CoroutineScopeIo>(),
+         _dispatcher = get<CoroutineDispatcherIo>()
       )
    }
    logInfo(tag, "single    -> SeedDatabase")
@@ -99,6 +104,19 @@ val dataModules = module {
          _personDao = get<IPersonDao>(),
          _seed = get<Seed>(),
          _dispatcher = get<CoroutineDispatcherIo>(),
+      )
+   }
+
+   logInfo(tag, "single    -> SeedWebservice")
+   single<SeedWebservice> {
+      SeedWebservice(
+         _personRepository = get<IPersonRepository>(),
+         _imageRepository = get<ImageRepository>(),
+         _localStorageRepository = get<ILocalStorageRepository>(),
+         _webservice = get<IPersonWebservice>(),
+         _seed = get<Seed>(),
+         _dispatcher = get<CoroutineDispatcherIo>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
       )
    }
 
@@ -166,7 +184,15 @@ val dataModules = module {
       )
    }
 
-   // Provide IPersonRepository, injecting the `viewModelScope`
+   logInfo(tag, "single    -> LocalStorageRepository: ILocalStorageRepository")
+   single<ILocalStorageRepository> {
+      LocalStorageRepository(
+         _context =  androidContext(),
+         _dispatcher = get<CoroutineDispatcherIo>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
+      )
+   }
+
    logInfo(tag, "single    -> PersonRepository: IPersonRepository")
    single<IPersonRepository> {
       PersonRepository(
@@ -180,7 +206,18 @@ val dataModules = module {
    logInfo(tag, "single    -> ImageRepositoryImpl: ImageRepository")
    single<ImageRepository> {
       ImageRepositoryImpl(
+         _context = androidContext(),
          _webService = get<ImageWebservice>(),
+         _localStorageRepository = get<ILocalStorageRepository>(),
+         _dispatcher = get<CoroutineDispatcherIo>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
+      )
+   }
+
+   logInfo(tag, "single    -> LocalStorageRepository: ILocalStorageRepository")
+   single<ILocalStorageRepository> {
+      LocalStorageRepository(
+         _context = androidContext(),
          _dispatcher = get<CoroutineDispatcherIo>(),
          _exceptionHandler = get<CoroutineExceptionHandler>()
       )
@@ -190,6 +227,8 @@ val dataModules = module {
    single<IMediaStoreRepository> {
       MediaStoreRepository(
          _context = androidContext(),
+         _dispatcher = get<CoroutineDispatcherIo>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
       )
    }
 }
@@ -201,16 +240,35 @@ val uiModules: Module = module {
    logInfo(tag, "single    -> createImageLoader")
    single<ImageLoader> { createImageLoader(androidContext()) }
 
-   logInfo(tag, "single    -> PersonValidator")
-   single<PersonValidator> { PersonValidator(androidContext()) }
+   logInfo(tag, "factory   -> PersonValidator")
+   factory<PersonValidator> { PersonValidator(androidContext()) }
+
+   logInfo(tag, "factory   -> IErrorHandler")
+   factory<IErrorHandler> {
+      ErrorHandler(
+         _coroutineScopeMain = get<CoroutineScopeMain>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
+      )
+   }
+
+   logInfo(tag, "factory   -> INavigationHandler")
+   factory<INavigationHandler> {
+      NavigationHandler(
+         _coroutineScopeMain = get<CoroutineScopeMain>(),
+         _exceptionHandler = get<CoroutineExceptionHandler>()
+      )
+   }
 
    logInfo(tag, "viewModel -> PersonViewModel")
    viewModel<PersonViewModel> {
       PersonViewModel(
-         _context = androidContext(),
          _personRepository = get<IPersonRepository>(),
          _imageRepository = get<ImageRepository>(),
+         _localStorageRepository = get<ILocalStorageRepository>(),
+         _mediaStoreRepository = get<IMediaStoreRepository>(),
          _validator = get<PersonValidator>(),
+         _errorHandler = get<IErrorHandler>(),
+         _navigationHandler = get<INavigationHandler>(),
          _imageLoader = get<ImageLoader>(),
          _exceptionHandler = get<CoroutineExceptionHandler>()
       )

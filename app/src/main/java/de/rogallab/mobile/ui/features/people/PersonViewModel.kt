@@ -1,17 +1,23 @@
-package de.rogallab.mobile.ui.people
+package de.rogallab.mobile.ui.features.people
 
-import android.content.Context
+import android.graphics.Bitmap
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.ImageLoader
+import de.rogallab.mobile.domain.ILocalStorageRepository
+import de.rogallab.mobile.domain.IMediaStoreRepository
 import de.rogallab.mobile.domain.IPersonRepository
 import de.rogallab.mobile.domain.ImageRepository
 import de.rogallab.mobile.domain.ResultData
 import de.rogallab.mobile.domain.entities.Person
+import de.rogallab.mobile.domain.handleLocalImage
+import de.rogallab.mobile.domain.removeRemoteImage
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.domain.utilities.logError
 import de.rogallab.mobile.domain.utilities.logInfo
 import de.rogallab.mobile.domain.utilities.newUuid
-import de.rogallab.mobile.ui.base.BaseViewModel
+import de.rogallab.mobile.ui.IErrorHandler
+import de.rogallab.mobile.ui.INavigationHandler
 import de.rogallab.mobile.ui.errors.ErrorParams
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,21 +33,25 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonViewModel(
-   private val _context: Context,
    private val _personRepository: IPersonRepository,
    private val _imageRepository: ImageRepository,
+   private val _localStorageRepository: ILocalStorageRepository,
+   private val _mediaStoreRepository: IMediaStoreRepository,
    private val _validator: PersonValidator,
+   private val _errorHandler: IErrorHandler,
+   private val _navigationHandler: INavigationHandler,
    private val _imageLoader: ImageLoader,
    private val _exceptionHandler: CoroutineExceptionHandler
-) : BaseViewModel(_exceptionHandler, TAG) {
+) : ViewModel(),
+   IErrorHandler by _errorHandler,
+   INavigationHandler by _navigationHandler
+{
 
    // region P E O P L E   L I S T   S C R E E N
    private val _peopleUiStateFlow = MutableStateFlow(PeopleUiState())
    //val peopleUiStateFlow = _peopleUiStateFlow.asStateFlow()
-
    // transform intent into an action
    fun onProcessPeopleIntent(intent: PeopleIntent) {
       logInfo(TAG, "onProcessIntent: $intent")
@@ -93,8 +103,6 @@ class PersonViewModel(
          is PersonIntent.LastNameChange -> onLastNameChange(intent.lastName)
          is PersonIntent.EmailChange -> onEmailChange(intent.email)
          is PersonIntent.PhoneChange -> onPhoneChange(intent.phone)
-         is PersonIntent.LocalImageChange -> onLocalImageChange(intent.localImage)
-         is PersonIntent.RemoteImageChange -> onRemoteImageChange(intent.remoteImage)
 
          is PersonIntent.Clear -> clearState()
          is PersonIntent.FetchById -> fetchById(intent.id)
@@ -102,6 +110,10 @@ class PersonViewModel(
          is PersonIntent.Update -> update()
          is PersonIntent.Remove -> remove(intent.person)
          is PersonIntent.UndoRemove -> undoRemove()
+
+         is PersonIntent.WriteToLocalStorage -> writeToLocalStorage(intent.bitmap)
+         is PersonIntent.WriteToMediaStore -> writeToMediaStore(intent.bitmap)
+
       }
    }
 
@@ -128,20 +140,6 @@ class PersonViewModel(
       if (phone == null || phone == _personUiStateFlow.value.person.phone) return
       _personUiStateFlow.update { it: PersonUiState ->
          it.copy(person = it.person.copy(phone = phone))
-      }
-   }
-   private fun onLocalImageChange(localImage: String?) {
-      if (localImage == null ||
-         localImage == _personUiStateFlow.value.person.localImage) return
-      _personUiStateFlow.update { it: PersonUiState ->
-         it.copy(person = it.person.copy(localImage = localImage))
-      }
-   }
-   private fun onRemoteImageChange(remoteImage: String?) {
-      if (remoteImage == null ||
-         remoteImage == _personUiStateFlow.value.person.remoteImage) return
-      _personUiStateFlow.update { it: PersonUiState ->
-         it.copy(person = it.person.copy(remoteImage = remoteImage))
       }
    }
 // endregion
@@ -171,7 +169,8 @@ class PersonViewModel(
          // handle new localImage
          val (localImage, remoteImage) = handleLocalImage(
             person = person,
-            deleteImage = _imageRepository::delete,
+            deleteLocalImage = _localStorageRepository::deleteFile,
+            deleteRemoteImage = _imageRepository::delete,
             postImage =  _imageRepository::post,
             handleErrorEvent = ::handleErrorEvent,
             scope = viewModelScope,
@@ -193,7 +192,8 @@ class PersonViewModel(
          // handle new localImage
          val (localImage, remoteImage) = handleLocalImage(
             person = person,
-            deleteImage =  _imageRepository::delete,
+            deleteLocalImage = _localStorageRepository::deleteFile,
+            deleteRemoteImage =  _imageRepository::delete,
             postImage = _imageRepository::post,
             handleErrorEvent = ::handleErrorEvent,
             scope = viewModelScope,
@@ -217,10 +217,10 @@ class PersonViewModel(
          // save remote image path on local storage
          val remoteAsLocalImage = viewModelScope.async(_exceptionHandler) {
             removeRemoteImage(
-               context = _context,
                person = person,
                getImage = _imageRepository::get,
-               deleteImage = _imageRepository::delete,
+               deleteLocalImage = _localStorageRepository::deleteFile,
+               deleteRemoteImage = _imageRepository::delete,
                handleErrorEvent = ::handleErrorEvent,
                scope = viewModelScope,
                exceptionHandler = _exceptionHandler
@@ -242,7 +242,31 @@ class PersonViewModel(
          create(person)
       }
    }
-// endregion
+   // endregion
+
+   // region writeToLocalStorage, WriteToMediaTore
+   private fun writeToLocalStorage(bitmap: Bitmap) {
+      logDebug(TAG, "writeToLocalStorage()")
+      viewModelScope.launch(_exceptionHandler) {
+         when (val resultData = _localStorageRepository.writeImage(bitmap)) {
+            is ResultData.Success -> _personUiStateFlow.update { it: PersonUiState ->
+               it.copy(person = it.person.copy(localImage = resultData.data))
+            }
+            is ResultData.Error -> handleErrorEvent(resultData.throwable)
+            else -> Unit
+         }
+      }
+   }
+   private fun writeToMediaStore(bitmap: Bitmap) {
+      logDebug(TAG, "writeToMediaStore()")
+      viewModelScope.launch(_exceptionHandler) {
+         when (val resultData = _mediaStoreRepository.saveImage(bitmap)) {
+            is ResultData.Error -> handleErrorEvent(resultData.throwable)
+            else -> Unit
+         }
+      }
+   }
+   // endregion
 
 // endregion
 

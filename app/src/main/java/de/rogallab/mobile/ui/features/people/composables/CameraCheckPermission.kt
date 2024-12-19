@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

@@ -1,5 +1,6 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
+import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -31,10 +32,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import de.rogallab.mobile.R
+import de.rogallab.mobile.data.io.LocalStorageRepository
 import de.rogallab.mobile.data.mediastore.MediaStoreRepository
+import de.rogallab.mobile.domain.ILocalStorageRepository
 import de.rogallab.mobile.domain.IMediaStoreRepository
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.ui.errors.ErrorParams
@@ -42,10 +46,10 @@ import de.rogallab.mobile.ui.errors.ErrorState
 import de.rogallab.mobile.ui.errors.showError
 import de.rogallab.mobile.ui.navigation.NavEvent
 import de.rogallab.mobile.ui.navigation.NavScreen
-import de.rogallab.mobile.ui.people.PersonViewModel
-import de.rogallab.mobile.ui.people.PersonIntent
-import de.rogallab.mobile.ui.people.PersonUiState
-import de.rogallab.mobile.ui.people.PersonValidator
+import de.rogallab.mobile.ui.features.people.PersonViewModel
+import de.rogallab.mobile.ui.features.people.PersonIntent
+import de.rogallab.mobile.ui.features.people.PersonUiState
+import de.rogallab.mobile.ui.features.people.PersonValidator
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -55,6 +59,7 @@ fun PersonScreen(
    viewModel: PersonViewModel = koinViewModel(),
    validator: PersonValidator = koinInject(),
    imageLoader: ImageLoader = koinInject(),
+   localStorageRepository: ILocalStorageRepository = koinInject(),
    mediaStoreRepository: IMediaStoreRepository = koinInject(),
    isInputScreen: Boolean = true,
    id: String? = null
@@ -160,12 +165,14 @@ fun PersonScreen(
          SelectAndShowImage(
             localImage = personUiState.person.localImage,      // State ↓
             remoteImage = personUiState.person.remoteImage,    // State ↓
-            onImagePathChange = { path: String ->              // Event ↑
-               viewModel.onProcessPersonIntent(PersonIntent.LocalImageChange(path))
+            handleErrorEvent = viewModel::handleErrorEvent,    // Event ↑
+            writeToLocalStorage = { bitmap: Bitmap ->          // Event ↑
+               viewModel.onProcessPersonIntent(PersonIntent.WriteToLocalStorage(bitmap))
             },
-            handleErrorEvent = viewModel::handleErrorEvent,
-            imageLoader = imageLoader,
-            mediaStoreRepository = mediaStoreRepository
+            writeToMediaStore = { bitmap: Bitmap ->            // Event ↑
+               viewModel.onProcessPersonIntent(PersonIntent.WriteToMediaStore(bitmap))
+            },
+            imageLoader = imageLoader
          )
       } // Column
    } // Scaffold

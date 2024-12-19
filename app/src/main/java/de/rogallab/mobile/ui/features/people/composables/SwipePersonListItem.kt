@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -40,7 +40,7 @@ import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.ui.errors.ErrorParams
 import de.rogallab.mobile.ui.navigation.NavEvent
 import de.rogallab.mobile.ui.navigation.NavScreen
-import de.rogallab.mobile.ui.people.PersonIntent
+import de.rogallab.mobile.ui.features.people.PersonIntent
 import kotlinx.coroutines.delay
 
 @Composable

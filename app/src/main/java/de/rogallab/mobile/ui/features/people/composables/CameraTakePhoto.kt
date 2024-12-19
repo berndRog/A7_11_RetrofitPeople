@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,41 +17,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.rogallab.mobile.R
-import de.rogallab.mobile.data.local.io.writeImageToStorage
-import de.rogallab.mobile.domain.IMediaStoreRepository
-import de.rogallab.mobile.domain.utilities.logDebug
-import org.koin.compose.koinInject
+import kotlinx.coroutines.launch
 
 @Composable
 fun CameraTakePhoto(
-   onImagePathChanged: (String) -> Unit,  // Event ↑
-   mediaStoreRepository: IMediaStoreRepository = koinInject(),
+   writeToLocalStorage: (Bitmap) -> Unit, // Event ↑
+   writeToMediaStore: (Bitmap) -> Unit,   // Event ↑
 ) {
    val context = LocalContext.current
    // callback camera
    val bitmapState = remember { mutableStateOf<Bitmap?>(value = null) }
+
+   val coroutineScope = rememberCoroutineScope()
+
    val cameraLauncher = rememberLauncherForActivityResult(
       ActivityResultContracts.TakePicturePreview()
    ) { it: Bitmap? ->
       bitmapState.value = it
       // save bitmap to internal storage of the app
       bitmapState.value?.let { bitmap ->
-         writeImageToStorage(context, bitmap)?.let { imagePath: String ->
-            logDebug("<-CameraTakePhoto", "Path $imagePath")
-            onImagePathChanged(imagePath) // Event ↑
+         coroutineScope.launch {
+            writeToLocalStorage(bitmap)
          }
-      }
-   }
+      } // bitmapState.value?.let
+   } // cameraLauncher
 
    bitmapState.value?.let { bitmap ->
       LaunchedEffect(bitmap) {
-         mediaStoreRepository.saveImage(bitmap)
+         writeToMediaStore(bitmap)
       }
    }
 

@@ -11,6 +11,13 @@ sealed class NavScreen(
    val title: String = "",
    val icon: ImageVector? = null
 ) {
+
+   data object Home: NavScreen(
+      route = "HomeScreen",
+      title = "Home",
+      icon = Icons.Outlined.Group
+   )
+
    data object PeopleList: NavScreen(
       route = "PeopleListScreen",
       title = "Personen",

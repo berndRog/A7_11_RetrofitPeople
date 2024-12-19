@@ -1,7 +1,10 @@
 package de.rogallab.mobile
 
 import android.app.Application
+import android.net.Uri
 import de.rogallab.mobile.data.local.database.SeedDatabase
+import de.rogallab.mobile.data.remote.SeedWebservice
+import de.rogallab.mobile.domain.ILocalStorageRepository
 import de.rogallab.mobile.domain.utilities.logInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,9 +35,9 @@ class AppStart : Application() {
          modules(domainModules, dataModules, uiModules)
       }
 
-      val seedDatabase: SeedDatabase by inject()
+      val seedWebservice: SeedWebservice by inject()
       _applicationScope.launch {
-         seedDatabase.seedPerson()
+         seedWebservice.seedPerson()
       }
    }
 

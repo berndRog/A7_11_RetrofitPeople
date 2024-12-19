@@ -15,7 +15,9 @@ import de.rogallab.mobile.data.remote.network.createOkHttpClient
 import de.rogallab.mobile.data.remote.network.createRetrofit
 import de.rogallab.mobile.data.remote.network.createWebservice
 import de.rogallab.mobile.data.repositories.PersonRepository
+import de.rogallab.mobile.domain.ILocalStorageRepository
 import de.rogallab.mobile.domain.IPersonRepository
+import de.rogallab.mobile.domain.ImageRepository
 import de.rogallab.mobile.domain.utilities.logError
 import de.rogallab.mobile.domain.utilities.logInfo
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -54,9 +56,11 @@ val dataTestModules = module {
    logInfo(tag, "single    -> Seed")
    single<Seed> {
       Seed(
-         androidContext(),
-         androidContext().resources
-      ).createPerson(false)
+         _resources = androidContext().resources,
+         _localStorageRepository = get<ILocalStorageRepository>(),
+         _coroutineScope = get<CoroutineScope>(),
+         _dispatcher = get<TestDispatcher>()
+      )
    }
 
    logInfo(tag, "single    -> SeedDatabase")

@@ -1,8 +1,5 @@
-package de.rogallab.mobile.ui.people
+package de.rogallab.mobile.domain
 
-import android.content.Context
-import de.rogallab.mobile.data.local.io.deleteFileOnStorage
-import de.rogallab.mobile.domain.ResultData
 import de.rogallab.mobile.domain.entities.Person
 import de.rogallab.mobile.domain.utilities.logDebug
 import de.rogallab.mobile.domain.utilities.splitUrl
@@ -35,7 +32,8 @@ fun whichImagePath(
 // then delete local image
 suspend fun handleLocalImage(
    person: Person,
-   deleteImage : suspend (String) -> ResultData<Boolean>,
+   deleteLocalImage: suspend (String) -> ResultData<Boolean>,
+   deleteRemoteImage : suspend (String) -> ResultData<Boolean>,
    postImage: suspend (String) -> ResultData<String>,
    handleErrorEvent: (Throwable) -> Unit,
    scope: CoroutineScope,
@@ -53,7 +51,7 @@ suspend fun handleLocalImage(
       if (!remoteImage.isNullOrEmpty()) {
          when (val resultData = scope.async(exceptionHandler) {
             val (filename,ext) = splitUrl(remoteImage!!)
-            deleteImage(filename)
+            deleteRemoteImage(filename)
          }.await()
          ) {
             is ResultData.Success -> logDebug(tag, "deleted remote image")
@@ -70,7 +68,10 @@ suspend fun handleLocalImage(
          is ResultData.Success -> {
             logDebug(tag, "posted new remote image")
             // then delete the local image
-            deleteFileOnStorage(localImage)
+            when(val r = deleteLocalImage(localImage)) {
+               is ResultData.Error -> handleErrorEvent(r.throwable)
+               else -> Unit
+            }
             // set localImage to null
             localImage = null
             // save remoteImage path
@@ -87,10 +88,10 @@ suspend fun handleLocalImage(
 // remove the image from remote webserver
 // for undo: download remote image and save it as local image
 suspend fun removeRemoteImage(
-   context: Context,
    person: Person,
-   getImage: suspend (Context, String) -> ResultData<String?>,
-   deleteImage: suspend (String) -> ResultData<Boolean>,
+   getImage: suspend (String) -> ResultData<String?>,
+   deleteLocalImage: suspend (String) -> ResultData<Boolean>,
+   deleteRemoteImage: suspend (String) -> ResultData<Boolean>,
    handleErrorEvent: (Throwable) -> Unit,
    scope: CoroutineScope,
    exceptionHandler: CoroutineExceptionHandler,
@@ -98,20 +99,24 @@ suspend fun removeRemoteImage(
    val tag = "<-handleLocalImage"
 
    // is there a new local image?
-   if (!person.localImage.isNullOrEmpty())
-      deleteFileOnStorage(person.localImage)
+   if (!person.localImage.isNullOrEmpty()) {
+      // then delete the local image
+      when (val r = deleteLocalImage(person.localImage)) {
+         is ResultData.Error -> handleErrorEvent(r.throwable)
+         else -> Unit
+      }
+   }
 
    var remoteImage = person.remoteImage
    var remoteAsLocalImage: String? = null
 
    // is there a remote image
    if (!remoteImage.isNullOrEmpty()) {
-
       // download remote image and save it as local image
       val (filename, ext) = splitUrl(remoteImage)
       when (val resultData = scope.async(exceptionHandler) {
          // save remote image path on local storage
-         getImage(context, filename)
+         getImage(filename)
       }.await()
       ) {
          is ResultData.Success -> {
@@ -127,7 +132,7 @@ suspend fun removeRemoteImage(
       // delete remote image
       when (val resultData = scope.async(exceptionHandler) {
          val (filename, ext) = splitUrl(remoteImage)
-         deleteImage(filename)
+         deleteRemoteImage(filename)
       }.await()
       ) {
          is ResultData.Success -> logDebug(tag, "remote image deleted")
@@ -138,3 +143,6 @@ suspend fun removeRemoteImage(
    logDebug(tag, "return remoteAsLocalImage: $remoteAsLocalImage")
    return remoteAsLocalImage
 } // end function
+
+
+

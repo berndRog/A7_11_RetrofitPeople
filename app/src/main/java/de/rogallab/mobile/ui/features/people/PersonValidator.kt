@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people
+package de.rogallab.mobile.ui.features.people
 
 import android.content.Context
 import android.util.Patterns

@@ -35,7 +35,7 @@ android {
 
    defaultConfig {
       applicationId = "de.rogallab.mobile"
-      minSdk = 32
+      minSdk = 28  // Android Pie 9.0
       targetSdk = 34
       versionCode = 1
       versionName = "1.0"

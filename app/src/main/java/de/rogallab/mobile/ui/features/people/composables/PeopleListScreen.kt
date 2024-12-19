@@ -1,4 +1,4 @@
-package de.rogallab.mobile.ui.people.composables
+package de.rogallab.mobile.ui.features.people.composables
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
@@ -46,8 +46,8 @@ import de.rogallab.mobile.ui.errors.ErrorState
 import de.rogallab.mobile.ui.errors.showError
 import de.rogallab.mobile.ui.navigation.NavEvent
 import de.rogallab.mobile.ui.navigation.NavScreen
-import de.rogallab.mobile.ui.people.PersonViewModel
-import de.rogallab.mobile.ui.people.PersonIntent
+import de.rogallab.mobile.ui.features.people.PersonViewModel
+import de.rogallab.mobile.ui.features.people.PersonIntent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
